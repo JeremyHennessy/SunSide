@@ -15,7 +15,7 @@ import "./style.css";
 import { BuildingPlanner } from "./components/BuildingPlanner";
 import { ClimateCard } from "./components/ClimateCard";
 import { CloudCard } from "./components/CloudCard";
-import { validBuilding } from "./solar/shadows";
+
 const places = [
   ["Halifax example", 44.6488, -63.5752, "America/Halifax"],
   ["New York", 40.7128, -74.006, "America/New_York"],
@@ -89,13 +89,8 @@ function App() {
   }
   function save() {
     try {
-      if (c.buildings?.some((b) => !validBuilding(b))) {
-        setMessage(
-          "Complete building measurements or remove unfinished buildings before saving.",
-        );
-        return;
-      }
-      localStorage.setItem("sunside", JSON.stringify(c));
+      const { mapped, buildings, ...settings } = c;
+      localStorage.setItem("sunside", JSON.stringify(settings));
       setMessage("Settings saved only in this browser.");
     } catch {
       setMessage("Browser storage is unavailable.");
@@ -118,15 +113,10 @@ function App() {
         saved.horizon > 89
       )
         throw Error();
+      delete saved.mapped;
+      delete saved.buildings;
       calculate(saved);
       if (saved.space && saved.space !== "patio" && saved.space !== "opening")
-        throw Error();
-      if (
-        saved.buildings &&
-        (!Array.isArray(saved.buildings) ||
-          saved.buildings.length > 5 ||
-          !saved.buildings.every(validBuilding))
-      )
         throw Error();
       setC(saved);
       setMessage("Loaded your saved settings.");
@@ -360,7 +350,7 @@ function App() {
                   : visible
                     ? "Potential direct sun"
                     : potential(p, c)
-                      ? "Blocked by your building model"
+                      ? "Blocked by mapped building"
                       : p.altitude <= c.horizon
                         ? "Below your horizon obstruction"
                         : "Outside your facing side"}
@@ -525,7 +515,7 @@ function App() {
                 Other daylight
               </span>
               <span>True-north bearings</span>
-              {(c.buildings?.length || 0) > 0 && (
+              {c.space === "patio" && (c.mapped?.buildings.length || 0) > 0 && (
                 <span>
                   <i style={{ background: "#e9a581" }} />
                   Modeled building shadow
@@ -545,8 +535,8 @@ function App() {
           <div className="stats">
             <article>
               <span>
-                {c.buildings?.some(validBuilding)
-                  ? "Sun with your building assumptions"
+                {c.space === "patio" && c.mapped
+                  ? "Sun excluding mapped shadows (partial)"
                   : "Potential direct sun"}
               </span>
               <strong>≈ {duration(data.sunMinutes)}</strong>
@@ -616,9 +606,11 @@ function App() {
               {c.space === "patio"
                 ? "This models an open patio point with sun from any direction. "
                 : "This models the sun in front of a vertical opening. "}
-              Your supplied walls can block the sun; other buildings, trees,
-              clouds, balcony depth and overhangs are excluded. All estimates
-              depend on your measurements and simplified level-ground geometry.
+              Mapped building heights can block a ground-level patio point when
+              patio mode is selected. Missing heights, trees, clouds, balcony
+              depth and overhangs are excluded. Balcony/window mode shows
+              facing-direction potential because the opening’s elevation is
+              unknown. Mapping coverage is partial and terrain is assumed level.
             </p>
           </div>
         </section>

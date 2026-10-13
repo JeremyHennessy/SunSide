@@ -1,41 +1,66 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-test("patio wall measurements change the model without guessed dimensions", async ({
+import ranges from "../fixtures/overture-ranges.json" with { type: "json" };
+test("automatic mapped footprints need no measurements and survive provider failure", async ({
   page,
 }) => {
+  await page.route(
+    "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/**",
+    async (route) => {
+      const r = ranges.find((r) => r.range === route.request().headers().range);
+      if (!r) return route.abort();
+      await route.fulfill({
+        status: r.status,
+        headers: r.headers,
+        body: Buffer.from(r.base64, "base64"),
+      });
+    },
+  );
   await page.goto("/");
   await page.getByLabel("Space type", { exact: true }).selectOption("patio");
-  await page.getByRole("button", { name: "Add a measured building" }).click();
-  await page.getByLabel("Bearing toward building (°)").fill("180");
-  await page.getByLabel("Distance to near wall (m)").fill("10");
-  await page.getByLabel("Wall width (m)").fill("20");
-  await page.getByLabel("Top height above ground (m)").fill("50");
-  await page.getByLabel("Top height above ground (m)").press("Tab");
   await page.getByLabel("Date", { exact: true }).fill("2026-06-21");
-  await page.getByRole("slider", { name: "Time of day" }).fill("780");
   await expect(
-    page.getByText("Blocked by your building model", { exact: true }),
+    page.getByText("outlines with heights", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("img", { name: /Building 1 measured wall/ }),
+    page.getByText("heights unknown", { exact: true }),
   ).toBeVisible();
-  expect(
-    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
-      .violations,
-  ).toEqual([]);
-  await page.setViewportSize({ width: 320, height: 900 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page
-    .getByRole("heading", { name: "Give nearby buildings a shape." })
-    .scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: "test-results/building-mobile.png",
-    fullPage: true,
-  });
+  await expect(
+    page.getByRole("button", { name: "Add a measured building" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Sun excluding mapped shadows (partial)", { exact: true }),
+  ).toBeVisible();
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page
+      .getByRole("heading", { name: "Put your patio on the map." })
+      .scrollIntoViewIfNeeded();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+        .violations,
+    ).toEqual([]);
+    await page.screenshot({ path: `test-results/mapped-${width}.png` });
+  }
+  const lat = await page.getByLabel("Latitude", { exact: true }).inputValue();
+  await page.getByRole("button", { name: "North", exact: true }).click();
+  await expect(page.getByLabel("Latitude", { exact: true })).not.toHaveValue(
+    lat,
+  );
+  await page.route(
+    "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/**",
+    (route) => route.abort(),
+  );
+  await page.getByLabel("Location", { exact: true }).selectOption("2");
+  await expect(page.getByText(/Building data unavailable/)).toBeVisible();
+  await expect(
+    page.getByText("Potential direct sun", { exact: true }).first(),
+  ).toBeVisible();
 });
 test("climate is opt-in and handles provider data and failure", async ({
   page,

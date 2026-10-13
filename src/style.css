@@ -753,3 +753,69 @@ button:disabled {
     font-size: 1.4rem;
   }
 }
+.mapped-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 24px;
+  align-items: start;
+}
+.mapped-map svg {
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+  display: block;
+}
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.map-controls button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 14px;
+}
+.map-controls span {
+  font-size: 0.8rem;
+}
+.map-status {
+  background: #fff2cc;
+  padding: 16px;
+  border-radius: 12px;
+  margin: 0 0 18px;
+}
+.map-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.map-counts strong {
+  font-size: 2rem;
+}
+.map-counts small {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.map-point {
+  border: 1px solid #dce2d9;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 18px 0;
+}
+.map-point legend {
+  font-size: 0.85rem;
+  padding: 0 6px;
+}
+.map-attribution {
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+@media (max-width: 760px) {
+  .mapped-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
