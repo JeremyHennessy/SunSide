@@ -614,7 +614,7 @@ function App() {
             </p>
           </div>
         </section>
-        <BuildingPlanner c={c} p={p} onChange={update} />
+        <BuildingPlanner c={c} p={p} onChange={update} onLocate={locate} />
         <CloudCard lat={c.lat} lon={c.lon} instant={selected} zone={c.zone} />
         <ClimateCard lat={c.lat} lon={c.lon} date={c.date} />
         <section className="season-section">

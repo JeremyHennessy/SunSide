@@ -4,6 +4,11 @@ const run = Math.floor((Date.now() - 6 * 3600000) / 3600000) * 3600000;
 function capabilities(layer: string) {
   return `<WMS_Capabilities xmlns="http://www.opengis.net/wms"><Capability><Layer><Layer><Name>${layer}</Name><EX_GeographicBoundingBox><westBoundLongitude>-180</westBoundLongitude><eastBoundLongitude>180</eastBoundLongitude><southBoundLatitude>-90</southBoundLatitude><northBoundLatitude>90</northBoundLatitude></EX_GeographicBoundingBox><Dimension name="time">${new Date(run - 24 * 3600000).toISOString()}/${new Date(run + 10 * 86400000).toISOString()}/PT1H</Dimension><Dimension name="reference_time" default="${new Date(run).toISOString()}"/></Layer></Layer></Capability></WMS_Capabilities>`;
 }
+test.beforeEach(async ({ page }) => {
+  await page.route("https://tile.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+});
 test("clouds are opt-in, preserve geometric hours and show related models honestly", async ({
   page,
 }) => {
