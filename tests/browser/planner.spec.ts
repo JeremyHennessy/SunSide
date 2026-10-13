@@ -42,6 +42,34 @@ test("automatic mapped footprints need no measurements and survive provider fail
   await expect(
     page.getByText("Sun excluding mapped shadows (partial)", { exact: true }),
   ).toBeVisible();
+  await page.getByLabel("Time of day", { exact: true }).fill("780");
+  const shadows = page.locator(".calculated-map-shadow");
+  const visibleShadow = page
+    .locator('.calculated-map-shadow:not([d="M0 0"])')
+    .first();
+  await expect(visibleShadow).toBeVisible();
+  const originalCoordinates = await visibleShadow.getAttribute("d");
+  await page.getByLabel("Time of day", { exact: true }).fill("900");
+  await expect(visibleShadow).not.toHaveAttribute("d", originalCoordinates!);
+  const result = await page
+    .getByText("Sun excluding mapped shadows (partial)", { exact: true })
+    .locator("..")
+    .innerText();
+  await page.getByLabel("Show calculated shadows").uncheck();
+  await expect(shadows).toHaveCount(0);
+  expect(
+    await page
+      .getByText("Sun excluding mapped shadows (partial)", { exact: true })
+      .locator("..")
+      .innerText(),
+  ).toBe(result);
+  await page.getByLabel("Show calculated shadows").check();
+  await expect(visibleShadow).toBeVisible();
+  await page.getByLabel("Street detail").fill("0");
+  await expect(
+    page.locator(".leaflet-tile-container").first().locator(".."),
+  ).toHaveCSS("opacity", "0");
+  await page.getByLabel("Street detail").fill("70");
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page
