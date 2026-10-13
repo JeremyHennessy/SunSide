@@ -18,12 +18,22 @@ Eight Chromium tests pass: control interaction, editable negative coordinates/ex
 
 Initial repository was verified public and empty by Git clone and GitHub connection. Bootstrap main SHA: dc3c2d6411a674e263e4440bba3af7346b26b2a8. GitHub Actions run 38337376392 completed successfully. Cloudflare project `sunside` created separately, Git integration verified against SunSide repo ID 1416342098, main production and all previews. Assigned hostname: https://sunside-3g7.pages.dev. Build command npm run build, output dist, Node 22.16.0. Initial deployment 2d92a48e-84a3-4faa-91ba-5dfb2995b830 succeeded at 2026-10-13T02:33:57Z with the exact bootstrap SHA. It required an API deployment trigger after the first push; automatic push deployment remains to be verified on the release-quality branch. Latest release evidence will be appended after merge. Documentation cannot contain its own commit hash.
 
+## Verified public release — October 13, 2026
+
+PR #1 merged after both GitHub CI runs 38337924865 and 38337950349 succeeded and all eight tests passed on preview https://72de9176.sunside-3g7.pages.dev. Verified application main SHA: **429171c000cd9e77b95a1263df1db47d0a689696**. Main verification run **38338161705** succeeded. Production deployment **d9e96d55-2154-47fd-b7a0-85bc755b10ed** built that exact SHA and succeeded at **2026-10-13T02:42:50Z**. Public URL: **https://sunside-3g7.pages.dev/**. All eight browser tests passed against the exact deployment URL and production screenshots were captured at all four target widths.
+
+**Deployment automation caveat:** Git integration and preview settings are configured, but push events did not automatically create deployments during this session. Both production and preview were triggered through the authorized Cloudflare API using Git branch HEAD, not direct asset uploads. Cloudflare dashboard Workers & Pages view failed twice with “Refresh the page to try again”, preventing UI integration repair. Do not claim automatic production/preview deployment is verified. Resolve this before considering every V1 acceptance criterion complete. No PartyPrint resources were modified.
+
+The SHA above is the verified application release; a subsequent documentation-only commit may advance main without changing the application. Obtain current main with `git rev-parse origin/main` and inspect the Cloudflare deployment metadata for its exact deployed SHA.
+
+Public root, all three guides, privacy, terms, sitemap, robots, social image and solar license return HTTP 200. All five static prose pages pass axe WCAG 2A/AA checks; guide mobile screenshot inspected. An unthrottled cached Chromium navigation measured 64ms DOM/load completion, which is not a mobile performance benchmark or a Core Web Vitals assessment.
+
 ## Commercial readiness
 
 Home metadata and original explanatory content implemented. Search-intent research found existing balcony/window planners and apartment-exposure tools; no volume or revenue estimates are asserted. Differentiation: clear assumptions, hemispheres and explicit zone handling. Three static indexable guides, privacy/terms pages, sitemap, canonical/social metadata and share image implemented. Search Console submission/indexing and publisher approval are not verified. No ads, tracking, affiliate links, earnings or approvals. Future experiments: apartment comparison and relevant disclosed affiliate placements after audience evidence.
 
 ## Next three priorities
 
-1. Validate on real mobile Safari/Android, measure performance and expand precise SPA reference fixtures near horizon/extreme latitudes.
+1. Repair and verify automatic GitHub-to-Pages push/preview triggers; current API Git builds work.
 2. Validate search indexing and collect user feedback without adding tracking prematurely.
 3. Add user-measured directional obstructions and apartment comparison before monetization.
