@@ -4,7 +4,7 @@ Know your sunny side. Free browser-based potential sunlight planning for balconi
 
 ## Develop
 
-Use Node 22.12+ (Node 24 recommended).
+Use Node 22.12+ (Node 24 recommended). `npm run lint` checks source formatting; typecheck verifies TypeScript. Build regenerates the static guides from `scripts/content.mjs`.
 
 ```sh
 npm ci
@@ -26,4 +26,4 @@ SunCalc BSD attribution is distributed in `public/suncalc-license.txt`. Calculat
 
 ## Hosting
 
-Separate Cloudflare Pages project `sunside`, GitHub `JeremyHennessy/SunSide`, production branch `main`, build `npm run build`, output `dist`, Node 22.16.0. Git pushes deploy automatically. No custom domain or paid service is configured. See `docs/CONTINUATION.md` for verified release evidence and priorities.
+Separate Cloudflare Pages project `sunside`, GitHub `JeremyHennessy/SunSide`, production branch `main`, build `npm run build`, output `dist`, Node 22.16.0. Public application: https://sunside-3g7.pages.dev/. Git integration is configured, but automatic push triggers have not fired during verification; deployments currently succeed using the Cloudflare API to build the chosen Git branch. No custom domain or paid service is configured. See `docs/CONTINUATION.md` for exact release evidence and priorities.
