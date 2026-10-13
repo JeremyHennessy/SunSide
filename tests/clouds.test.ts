@@ -7,6 +7,7 @@ import {
   freshRun,
   nearestTime,
   parseNws,
+  parseMet,
   parsePoint,
   pointUrl,
   products,
@@ -30,6 +31,44 @@ function raw(value: unknown = 56) {
   };
 }
 describe("cloud products and evidence contracts", () => {
+  it("keeps MET total cloud and overlapping layers separate with published units", () => {
+    const raw = {
+      properties: {
+        meta: {
+          updated_at: new Date(run).toISOString(),
+          units: {
+            cloud_area_fraction: "%",
+            cloud_area_fraction_low: "%",
+            cloud_area_fraction_medium: "%",
+            cloud_area_fraction_high: "%",
+          },
+        },
+        timeseries: [12, 15, 18].map((h) => ({
+          time: `2026-10-13T${h}:00:00Z`,
+          data: {
+            instant: {
+              details: {
+                cloud_area_fraction: 80,
+                cloud_area_fraction_low: 70,
+                cloud_area_fraction_medium: 50,
+                cloud_area_fraction_high: 60,
+              },
+            },
+          },
+        })),
+      },
+    };
+    expect(parseMet(raw, t, t).value).toBe(80);
+    expect(parseMet(raw, t, t).layers).toEqual({
+      low: 70,
+      medium: 50,
+      high: 60,
+    });
+    expect(() => parseMet(raw, t + 4 * 3600000, t)).toThrow();
+    raw.properties.meta.units.cloud_area_fraction = "fraction";
+    expect(() => parseMet(raw, t, t)).toThrow();
+    expect(() => parseMet(raw, t, run + 25 * 3600000)).toThrow();
+  });
   it("parses an independently fetched official GDPS response with provenance", () => {
     const point = parsePoint(
       recorded,

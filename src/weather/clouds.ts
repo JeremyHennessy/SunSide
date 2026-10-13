@@ -5,6 +5,7 @@ export type CloudPoint = {
   valid: number;
   run: number;
   grid?: [number, number];
+  layers?: { low: number | null; medium: number | null; high: number | null };
 };
 export type CloudProduct = { layer: string; label: string; family: string };
 export const products: CloudProduct[] = [
@@ -26,6 +27,99 @@ export const products: CloudProduct[] = [
 ];
 export type Availability = { times: number[]; run: number; bounds: number[] };
 const hour = 3600000;
+export type MetForecast = {
+  properties?: {
+    meta?: { updated_at?: string; units?: Record<string, string> };
+    timeseries?: {
+      time?: string;
+      data?: { instant?: { details?: Record<string, unknown> } };
+    }[];
+  };
+};
+export function parseMet(
+  raw: unknown,
+  target: number,
+  now: number,
+): CloudPoint {
+  const r = raw as MetForecast,
+    meta = r.properties?.meta;
+  const updated = Date.parse(meta?.updated_at || "");
+  if (!freshRun(updated, now) || meta?.units?.cloud_area_fraction !== "%")
+    throw Error("Stale or unexpected MET Norway product.");
+  const rows = r.properties?.timeseries || [];
+  const times = rows
+    .map((r) => Date.parse(r.time || ""))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  const valid = nearestTime(times, target);
+  if (valid === null) throw Error("No MET forecast for this hour.");
+  const details = rows.find((r) => Date.parse(r.time || "") === valid)?.data
+    ?.instant?.details;
+  const number = (field: string) => {
+    const v = details?.[field];
+    return meta?.units?.[field] === "%" &&
+      typeof v === "number" &&
+      Number.isFinite(v) &&
+      v >= 0 &&
+      v <= 100
+      ? v
+      : null;
+  };
+  const value = number("cloud_area_fraction");
+  if (value === null) throw Error("Missing MET total cloud cover.");
+  return {
+    model: "MET Norway · location forecast",
+    family: "MET Norway",
+    value,
+    run: updated,
+    valid,
+    layers: {
+      low: number("cloud_area_fraction_low"),
+      medium: number("cloud_area_fraction_medium"),
+      high: number("cloud_area_fraction_high"),
+    },
+  };
+}
+const metCache = new Map<string, { expires: number; raw: unknown }>();
+let metThrottledUntil = 0;
+export async function loadMet(
+  lat: number,
+  lon: number,
+  target: number,
+  signal: AbortSignal,
+  now = Date.now(),
+) {
+  const c = cloudCoordinates(lat, lon),
+    key = `${c.lat},${c.lon}`;
+  if (now < metThrottledUntil) throw Error("MET Norway rate limit cooldown.");
+  let cached = metCache.get(key);
+  if (!cached || cached.expires <= now) {
+    // Simple browser request: the browser's Origin identifies SunSide. No custom headers/preflight.
+    const url =
+      "https://api.met.no/weatherapi/locationforecast/2.0/complete?" +
+      new URLSearchParams({ lat: String(c.lat), lon: String(c.lon) });
+    const response = await fetch(url, { ...requestOptions, signal });
+    if (response.status === 429) {
+      metThrottledUntil = now + 10 * 60000;
+      throw Error("MET Norway rate limit cooldown.");
+    }
+    if (!response.ok) throw Error("MET Norway unavailable.");
+    if (response.status === 203) throw Error("MET product deprecated.");
+    const expires = Date.parse(response.headers.get("Expires") || "");
+    const maxAge = /max-age=(\d+)/i.exec(
+      response.headers.get("Cache-Control") || "",
+    );
+    cached = {
+      raw: await response.json(),
+      expires: Number.isFinite(expires)
+        ? expires
+        : now + (maxAge ? Number(maxAge[1]) * 1000 : 15 * 60000),
+    };
+    metCache.set(key, cached);
+    if (metCache.size > 32) metCache.delete(metCache.keys().next().value!);
+  }
+  return parseMet(cached.raw, target, now);
+}
 export function cloudCoordinates(lat: number, lon: number) {
   return { lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100 };
 }

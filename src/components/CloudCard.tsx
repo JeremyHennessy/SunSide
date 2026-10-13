@@ -6,6 +6,7 @@ import {
   loadEccc,
   loadEnsemble,
   loadNws,
+  loadMet,
   products,
   type CloudPoint,
 } from "../weather/clouds";
@@ -58,7 +59,7 @@ export function CloudCard({
   const current = snapshot?.key === key ? snapshot : null;
   const members = ensemble?.key === key ? ensemble.points : null;
   const totalProducts =
-    current?.points.filter((p) => p.family === "ECCC GEM") || [];
+    current?.points.filter((p) => p.family !== "NWS forecast") || [];
   // NDFD skyCover forecasts opaque sky cover; GEM total cloud includes visible clouds.
   // Show both, but do not blend different cloud definitions into one number.
   const summary = consensus(totalProducts);
@@ -80,6 +81,10 @@ export function CloudCard({
           label: p.label,
           load: () => loadEccc(p, lat, lon, target, ctrl.signal),
         }));
+        jobs.push({
+          label: "MET Norway",
+          load: () => loadMet(lat, lon, target, ctrl.signal),
+        });
         // Avoid futile NWS requests outside its approximate continental/Alaska/Hawaii domains.
         if (lat >= 18 && lat <= 72 && lon >= -180 && lon <= -65)
           jobs.push({
@@ -133,9 +138,9 @@ export function CloudCard({
       </p>
       <p className="hint">
         Only when you load: rounded coordinates {c.lat}°, {c.lon}° and your
-        network request go to ECCC and, for North American coordinates, to NWS
-        to check US coverage. No weather request follows the time slider
-        automatically.
+        network request go to ECCC, MET Norway and, for North American
+        coordinates, to NWS to check US coverage. No weather request follows the
+        time slider automatically.
       </p>
       <button onClick={() => load()} disabled={busy}>
         {busy
@@ -159,10 +164,10 @@ export function CloudCard({
                 </span>
               </div>
               <p className="hint">
-                ECCC total-cloud mean; related models share one forecast family.
-                NWS opaque sky cover is shown separately and is not averaged
-                into total cloud. Agreement is not measured accuracy or a
-                probability of sunshine.{" "}
+                Total-cloud mean, weighted equally by forecast family. Related
+                ECCC models share one vote. NWS opaque sky cover is shown
+                separately and is not averaged into total cloud. Agreement is
+                not measured accuracy or a probability of sunshine.{" "}
                 {outdated
                   ? "Loaded more than 15 minutes ago: refresh before planning."
                   : `Loaded ${clock(current.checked, zone)}.`}
@@ -198,6 +203,23 @@ export function CloudCard({
                     ? ` · Grid ${p.grid[0].toFixed(2)}°, ${p.grid[1].toFixed(2)}°`
                     : ""}
                 </p>
+                {p.layers && (
+                  <p className="hint">
+                    MET cloud levels: low{" "}
+                    {p.layers.low === null
+                      ? "unavailable"
+                      : `${Math.round(p.layers.low)}%`}
+                    , middle{" "}
+                    {p.layers.medium === null
+                      ? "unavailable"
+                      : `${Math.round(p.layers.medium)}%`}
+                    , high{" "}
+                    {p.layers.high === null
+                      ? "unavailable"
+                      : `${Math.round(p.layers.high)}%`}
+                    . Layers overlap and must not be added together.
+                  </p>
+                )}
               </article>
             ))}
           </div>
@@ -256,11 +278,14 @@ export function CloudCard({
         <p>
           These are raw forecast products, not a locally calibrated cloud model.
           ECCC GEM global, regional and high-resolution forecasts share inputs
-          and model lineage. NWS sky cover is an official US forecast product
-          and may also use numerical models. Their errors can be correlated. The
-          displayed range can miss the true outcome. NWS forecasts opaque sky
-          cover, while ECCC reports total cloud cover; the quantities are shown
-          separately because thin clouds can transmit sunlight.
+          and model lineage. MET Norway supplies automatic location forecasts,
+          using ECMWF globally and regional systems in its priority areas.
+          Provider update time is shown, not an assumed underlying model cycle.
+          NWS sky cover is an official US forecast product and may also use
+          numerical models. Their errors can be correlated. The displayed range
+          can miss the true outcome. NWS forecasts opaque sky cover, while ECCC
+          reports total cloud cover; the quantities are shown separately because
+          thin clouds can transmit sunlight.
         </p>
         <p>
           Cloud fraction is not cloud opacity, solar radiation, or the chance
@@ -275,7 +300,8 @@ export function CloudCard({
           <a href="https://eccc-msc.github.io/open-data/licence/readme_en/">
             Environment and Climate Change Canada
           </a>
-          ;{" "}
+          ; <a href="https://api.met.no/doc/License">MET Norway (CC BY 4.0)</a>,
+          with rounded comparison and no provider endorsement ;{" "}
           <a href="https://www.weather.gov/documentation/services-web-api">
             National Weather Service
           </a>{" "}
