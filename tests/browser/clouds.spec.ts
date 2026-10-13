@@ -229,3 +229,28 @@ test("cloud outage does not break solar planning", async ({ page }) => {
   await page.getByRole("button", { name: "E", exact: true }).click();
   await expect(page.locator(".stats")).toContainText("Potential direct sun");
 });
+test("MET throttling stops repeated network requests", async ({ page }) => {
+  let requests = 0;
+  await page.route("https://geo.weather.gc.ca/**", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
+  );
+  await page.route("https://api.met.no/**", (route) => {
+    requests++;
+    return route.fulfill({ status: 429, body: "Rate limited" });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Load cloud forecasts", exact: true })
+    .click();
+  await expect(
+    page.getByText(/No fresh cloud forecast available/),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+  await page
+    .getByRole("button", { name: "Refresh cloud forecasts", exact: true })
+    .click();
+  await expect(
+    page.getByText(/No fresh cloud forecast available/),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+});
