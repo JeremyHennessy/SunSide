@@ -1,5 +1,11 @@
 # SunSide authoritative handoff
 
+## Current verified snapshot
+
+Automatic public building maps are live at https://sunside-3g7.pages.dev/ . Manual building measurements are removed. Nearby Overture footprints/parts and recorded heights load automatically; users can tap a ground-level patio point, with calculated shadows reflected in the timeline and seasonal comparisons. Missing height coverage is explicit. 63 numerical/parser tests and 14 browser tests pass; screenshots inspected at 320/390/768/1440. No measured real-world shadow accuracy or cloud forecast skill is claimed.
+
+Verified application main SHA 461a6430c6328d8d376270258db40b6e4bc2db9e, GitHub CI 38345189618 success, Cloudflare production fa1df3a5-b6a8-4b95-958e-bfbad7769ce9 success at 2026-10-13T04:11:12.086454Z. Production passed all 14 browser tests and a real public Overture lookup/shadow/slider check. PR #8 merged after CI 38345017550 and 38345037832 success and exact preview 8dfc960d-8afe-403c-9dea-07a3c2c69743 browser/live-provider verification. Latest documentation commits may advance main; retrieve main and inspect the canonical deployment for the exact final SHA. API-triggered Git builds work; automatic Pages push triggers remain unverified. Detailed milestones below retain historical evidence.
+
 ## Product and implementation
 
 Free consumer sunlight planner with organic-discovery potential; no accounts, subscriptions, paid APIs or backend. React/TypeScript/Vite, SunCalc 2.1.1, Temporal polyfill. Location presets across hemispheres, manual coordinates, opt-in geolocation, user-selected IANA zone, eight directions/exact bearing, date, time playback, calculated SVG sky plot, five-minute intervals, daylight and seasonal comparisons. Explicit save/load/delete browser storage. Actual exposure is not known.
@@ -89,3 +95,8 @@ Local verification: 63 numerical/parser tests and 14 Chromium browser tests pass
 Source references: https://docs.overturemaps.org/examples/overture-tiles/ ; https://docs.overturemaps.org/schema/reference/buildings/building/ ; https://docs.overturemaps.org/attribution/ . Halifax municipal Building Polygons service was inspected and lacks numeric height fields, so it is not presented as a height source. OSM editing API and public Overpass are not used as a production application backend. Public Overture archive availability is external; map failure leaves astronomical potential usable and shadows unknown.
 
 Next three priorities: validate automatic height coverage against suitable public LiDAR/municipal elevation sources; add address search and map street context using appropriately licensed services/data; repair and verify automatic Pages Git triggers. Forecast accuracy remains unmeasured and is separate from this mapping change.
+
+
+### Verified automatic mapping release
+
+Application PR #8 merged to 461a6430c6328d8d376270258db40b6e4bc2db9e after both CI runs (38345017550 / 38345037832) succeeded and 14 tests plus real Overture public-data checks passed on exact preview https://8dfc960d.sunside-3g7.pages.dev. Main CI 38345189618 succeeded. Production fa1df3a5-b6a8-4b95-958e-bfbad7769ce9 built the exact merge SHA, succeeded 2026-10-13T04:11:12.086454Z, and canonical project metadata confirms this deployment. All 14 tests passed on https://fa1df3a5.sunside-3g7.pages.dev; real public-root Chromium lookup returned the same 113 height-bearing and 488 unknown outlines, showed morning blockage, zero page errors and zero added map requests while scrubbing time. The follow-up clarifies square coverage wording and records this evidence without changing calculations.
