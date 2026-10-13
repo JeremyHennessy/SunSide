@@ -1,5 +1,92 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+test("patio wall measurements change the model without guessed dimensions", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Space type", { exact: true }).selectOption("patio");
+  await page.getByRole("button", { name: "Add a measured building" }).click();
+  await page.getByLabel("Bearing toward building (°)").fill("180");
+  await page.getByLabel("Distance to near wall (m)").fill("10");
+  await page.getByLabel("Wall width (m)").fill("20");
+  await page.getByLabel("Top height above ground (m)").fill("50");
+  await page.getByLabel("Top height above ground (m)").press("Tab");
+  await page.getByLabel("Date", { exact: true }).fill("2026-06-21");
+  await page.getByRole("slider", { name: "Time of day" }).fill("780");
+  await expect(
+    page.getByText("Blocked by your building model", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: /Building 1 measured wall/ }),
+  ).toBeVisible();
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+      .violations,
+  ).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 900 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("heading", { name: "Give nearby buildings a shape." })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "test-results/building-mobile.png",
+    fullPage: true,
+  });
+});
+test("climate is opt-in and handles provider data and failure", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("https://power.larc.nasa.gov/api/**", async (route) => {
+    requests++;
+    expect(route.request().url()).not.toContain("44.6488");
+    await route.fulfill({
+      json: {
+        properties: {
+          parameter: {
+            T2M: {
+              JAN: -2,
+              FEB: -1,
+              MAR: 2,
+              APR: 5,
+              MAY: 10,
+              JUN: 15,
+              JUL: 20,
+              AUG: 19,
+              SEP: 16,
+              OCT: 11,
+              NOV: 6,
+              DEC: 1,
+            },
+          },
+        },
+        header: { range: "2001–2025", fill_value: -999 },
+        parameters: { T2M: { units: "C" } },
+      },
+    });
+  });
+  await page.goto("/");
+  expect(requests).toBe(0);
+  await page
+    .getByRole("button", { name: "Load regional climate averages" })
+    .click();
+  await expect(page.getByText(/mean temperature:/)).toBeVisible();
+  expect(requests).toBe(1);
+  await page.getByLabel("Location", { exact: true }).selectOption("2");
+  await page.route("https://power.larc.nasa.gov/api/**", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
+  );
+  await page
+    .getByRole("button", { name: "Load regional climate averages" })
+    .click();
+  await expect(
+    page.getByText(/Could not load regional climate averages/),
+  ).toBeVisible();
+});
 test("manual negative coordinates are editable and zones are explicit", async ({
   page,
 }) => {

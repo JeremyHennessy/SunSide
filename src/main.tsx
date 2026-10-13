@@ -6,11 +6,15 @@ import {
   today,
   duration,
   position,
-  qualifies,
+  exposure,
+  potential,
   skyPoint,
   type Config,
 } from "./solar/engine";
 import "./style.css";
+import { BuildingPlanner } from "./components/BuildingPlanner";
+import { ClimateCard } from "./components/ClimateCard";
+import { validBuilding } from "./solar/shadows";
 const places = [
   ["Halifax example", 44.6488, -63.5752, "America/Halifax"],
   ["New York", 40.7128, -74.006, "America/New_York"],
@@ -45,7 +49,7 @@ function App() {
     data.start + Math.min(minute, (data.end - data.start) / 60000 - 1) * 60000;
   const p = position(selected, c.lat, c.lon),
     point = skyPoint(p),
-    visible = qualifies(p, c.facing, c.horizon);
+    visible = exposure(p, c);
   const seasons = useMemo(
     () =>
       ["03-20", "06-21", "09-22", "12-21"].map((d, i) => {
@@ -84,6 +88,12 @@ function App() {
   }
   function save() {
     try {
+      if (c.buildings?.some((b) => !validBuilding(b))) {
+        setMessage(
+          "Complete building measurements or remove unfinished buildings before saving.",
+        );
+        return;
+      }
       localStorage.setItem("sunside", JSON.stringify(c));
       setMessage("Settings saved only in this browser.");
     } catch {
@@ -108,6 +118,15 @@ function App() {
       )
         throw Error();
       calculate(saved);
+      if (saved.space && saved.space !== "patio" && saved.space !== "opening")
+        throw Error();
+      if (
+        saved.buildings &&
+        (!Array.isArray(saved.buildings) ||
+          saved.buildings.length > 5 ||
+          !saved.buildings.every(validBuilding))
+      )
+        throw Error();
       setC(saved);
       setMessage("Loaded your saved settings.");
     } catch {
@@ -250,7 +269,23 @@ function App() {
               {message}
             </p>
             <div className="divider" />
-            <label>Which way does your space face?</label>
+            <label>
+              Space type
+              <select
+                aria-label="Space type"
+                value={c.space || "opening"}
+                onChange={(e) =>
+                  update({ space: e.target.value as Config["space"] })
+                }
+              >
+                <option value="opening">Balcony / window opening</option>
+                <option value="patio">Open patio / garden point</option>
+              </select>
+            </label>
+            <label>
+              Which way does your space face?{" "}
+              {c.space === "patio" ? "(not used for open patio)" : ""}
+            </label>
             <div className="directions">
               {dirs.map((d, i) => (
                 <button
@@ -323,7 +358,11 @@ function App() {
                   ? "Below horizon"
                   : visible
                     ? "Potential direct sun"
-                    : "Outside your facing side"}
+                    : potential(p, c)
+                      ? "Blocked by your building model"
+                      : p.altitude <= c.horizon
+                        ? "Below your horizon obstruction"
+                        : "Outside your facing side"}
               </span>
             </div>
             <div className="sky">
@@ -359,7 +398,7 @@ function App() {
                 <path
                   d={`M200 200 L${200 + 150 * Math.sin(((c.facing - 90) * Math.PI) / 180)} ${200 - 150 * Math.cos(((c.facing - 90) * Math.PI) / 180)} A150 150 0 0 1 ${200 + 150 * Math.sin(((c.facing + 90) * Math.PI) / 180)} ${200 - 150 * Math.cos(((c.facing + 90) * Math.PI) / 180)} Z`}
                   fill="#ffce65"
-                  opacity=".09"
+                  opacity={c.space === "patio" ? 0 : 0.09}
                 />
                 {data.samples
                   .filter((s) => s.altitude > 0)
@@ -371,7 +410,13 @@ function App() {
                         cx={q.x}
                         cy={q.y}
                         r="2"
-                        fill={s.visible ? "#ffce65" : "#789ba8"}
+                        fill={
+                          s.visible
+                            ? "#ffce65"
+                            : s.blocked
+                              ? "#e9a581"
+                              : "#789ba8"
+                        }
                       />
                     );
                   })}
@@ -382,6 +427,7 @@ function App() {
                   y2={200 - 130 * Math.cos((c.facing * Math.PI) / 180)}
                   stroke="#b7d6e0"
                   strokeWidth="2"
+                  opacity={c.space === "patio" ? 0 : 1}
                 />
                 <circle cx="200" cy="200" r="7" fill="#b7d6e0" />
                 {p.altitude > 0 && (
@@ -478,6 +524,12 @@ function App() {
                 Other daylight
               </span>
               <span>True-north bearings</span>
+              {(c.buildings?.length || 0) > 0 && (
+                <span>
+                  <i style={{ background: "#e9a581" }} />
+                  Modeled building shadow
+                </span>
+              )}
             </div>
           </section>
         </div>
@@ -491,9 +543,17 @@ function App() {
           </div>
           <div className="stats">
             <article>
-              <span>Potential direct sun</span>
+              <span>
+                {c.buildings?.some(validBuilding)
+                  ? "Sun with your building assumptions"
+                  : "Potential direct sun"}
+              </span>
               <strong>≈ {duration(data.sunMinutes)}</strong>
-              <p>On the outward-facing side of your space</p>
+              <p>
+                {c.space === "patio"
+                  ? "At your selected open patio point"
+                  : "On the outward-facing side of your space"}
+              </p>
             </article>
             <article>
               <span>First / last possible sun</span>
@@ -529,9 +589,11 @@ function App() {
                 style={{
                   background: s.visible
                     ? "#e9b846"
-                    : s.daylight
-                      ? "#9bbcc7"
-                      : "#e1e6e5",
+                    : s.blocked
+                      ? "#ce8553"
+                      : s.daylight
+                        ? "#9bbcc7"
+                        : "#e1e6e5",
                 }}
               />
             ))}
@@ -550,13 +612,17 @@ function App() {
           <div className="assumption">
             <strong>Potential sunshine, with a clear explanation.</strong>
             <p>
-              This models the sun above your horizon and in front of a vertical
-              opening. Trees, buildings, clouds, balcony depth and overhangs can
-              change what actually reaches your space. Your obstruction angle is
-              a simplified assumption, not verified building geometry.
+              {c.space === "patio"
+                ? "This models an open patio point with sun from any direction. "
+                : "This models the sun in front of a vertical opening. "}
+              Your supplied walls can block the sun; other buildings, trees,
+              clouds, balcony depth and overhangs are excluded. All estimates
+              depend on your measurements and simplified level-ground geometry.
             </p>
           </div>
         </section>
+        <BuildingPlanner c={c} p={p} onChange={update} />
+        <ClimateCard lat={c.lat} lon={c.lon} date={c.date} />
         <section className="season-section">
           <span className="eyebrow">A DIFFERENT SEASON, A DIFFERENT STORY</span>
           <h2>Follow the year’s light.</h2>
@@ -644,13 +710,13 @@ function App() {
         <details>
           <summary>Privacy & terms</summary>
           <p>
-            Calculations run in your browser. SunSide does not send your
-            coordinates to a location service. Geolocation runs only when you
-            request it. Saving stores your configuration on this device; delete
-            it with Delete & reset. Hosting providers may process routine
-            request logs. No analytics, ads or affiliate tracking are installed.
-            Estimates are informational and are not a guarantee of actual
-            exposure or a property assessment.
+            Solar and shadow calculations run in your browser. The optional
+            climate button sends rounded regional coordinates to NASA POWER.
+            Geolocation runs only when you request it. Saving stores your
+            configuration on this device; delete it with Delete & reset. Hosting
+            providers may process routine request logs. No analytics, ads or
+            affiliate tracking are installed. Estimates are informational and
+            are not a guarantee of actual exposure or a property assessment.
           </p>
         </details>
         <p>
