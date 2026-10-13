@@ -618,3 +618,64 @@ footer nav {
   font-size: 12px;
   line-height: 2;
 }
+.building-section,
+.climate-section {
+  margin: 40px 0;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #dce2d9;
+  border-radius: 18px;
+}
+.building-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  border-top: 1px solid #dce2d9;
+  padding: 24px 0;
+}
+.building-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.building-diagram svg {
+  width: 100%;
+  max-width: 400px;
+}
+.climate-months {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.climate-months > div {
+  padding: 16px 10px;
+  background: #f2f4ee;
+  border-radius: 8px;
+}
+.climate-months span {
+  display: block;
+  font-size: 11px;
+}
+.climate-months strong {
+  display: block;
+  margin-top: 8px;
+}
+.climate-months .selected {
+  background: #fff1cb;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+@media (max-width: 600px) {
+  .building-section,
+  .climate-section {
+    padding: 18px;
+  }
+  .building-card {
+    grid-template-columns: 1fr;
+  }
+  .climate-months {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

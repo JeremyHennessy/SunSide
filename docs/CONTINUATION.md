@@ -6,7 +6,7 @@ Free consumer sunlight planner with organic-discovery potential; no accounts, su
 
 ## Calculation conventions and limitations
 
-Degrees clockwise from true north; apparent altitude includes SunCalc refraction. UTC timestamps. Apparent center altitude >0° defines daylight; this differs from sunrise/sunset upper-limb definitions. Outward-facing half-space plus uniform horizon threshold defines potential direct sun. Five-minute midpoint sampling; approximate boundaries, narrow intervals may be missed. Multiple intervals are retained. No sector obstructions, architecture dimensions, automatic zone lookup, geocoder or real building shadows. Representative season dates are approximate. Civil days use the explicit IANA zone and DST; users must confirm zones for manual/device coordinates. Engine is independent from UI in `src/solar/engine.ts`.
+Degrees clockwise from true north; apparent altitude includes SunCalc refraction. UTC timestamps. Apparent center altitude >0° defines daylight; this differs from sunrise/sunset upper-limb definitions. Outward-facing half-space plus uniform horizon threshold defines potential direct sun. Five-minute midpoint sampling; approximate boundaries, narrow intervals may be missed. Multiple intervals are retained. No automatic zone lookup, geocoder or automatically verified building geometry. User-measured wall shadows and regional climate are described in the latest milestone below. Representative season dates are approximate. Civil days use the explicit IANA zone and DST; users must confirm zones for manual/device coordinates. Engine is independent from UI in `src/solar/engine.ts`.
 
 ## Verification
 
@@ -37,3 +37,14 @@ Home metadata and original explanatory content implemented. Search-intent resear
 1. Repair and verify automatic GitHub-to-Pages push/preview triggers; current API Git builds work.
 2. Validate search indexing and collect user feedback without adding tracking prematurely.
 3. Add user-measured directional obstructions and apartment comparison before monetization.
+
+## Patio shadows and climate milestone — October 13, 2026
+
+Branch feat/patio-shadows-climate adds open-patio mode, up to five explicitly user-measured rectangular walls, ray/wall intersection and north-up shadow projections at the selected point height. Geometry is level-ground, zero-depth vertical facades perpendicular to their supplied bearing; no automatic maps, terrain, trees, roof or whole-patio coverage. Draft walls start with missing dimensions and do not affect exposure until valid. Save rejects incomplete walls. Original opening model remains available. All day and seasonal intervals use supplied obstructions.
+
+Optional NASA POWER/MERRA-2 monthly mean temperature climatology is fetched only on an explicit click using rounded regional coordinates (0.5° × 0.625°), credentials omitted. Provider period, missing data and failure are handled; bounded memory cache, no durable climate storage. Actual Halifax browser request succeeded with the current 2001–2025 period. NASA permits commercial use with attribution; regional averages are not forecasts or measured patio temperatures. Sources: https://power.larc.nasa.gov/docs/services/api/temporal/climatology/ and https://forum.earthdata.nasa.gov/viewtopic.php?t=82 . Google Photorealistic 3D Tiles requires billing and restricts extraction; not integrated. OpenStreetMap heights can support future verified geometry, but missing heights must remain unknown and public Overpass is not a permanent commercial backend.
+
+48 numerical/parser tests and 10 Chromium tests pass locally, including independent analytic wall-shadow examples, raised patio geometry, bearing wrap, multi-interval exposure, explicit climate request and provider failure. Build/typecheck/format pass. Axe detects zero violations in planner and measured-building state; actual 320/390/768/1440 screenshots inspected. Release CI/preview/production evidence will be recorded after publishing.
+
+Next priorities: repair automatic Pages push triggers; add licensed measured 3D/municipal geometry import with explicit coverage/uncertainty; validate indexing and user feedback before monetization.
+

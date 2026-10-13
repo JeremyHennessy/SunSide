@@ -1,5 +1,6 @@
 import { getPosition } from "suncalc";
 import { Temporal } from "@js-temporal/polyfill";
+import { buildingBlocks, type Building } from "./shadows";
 export type Config = {
   lat: number;
   lon: number;
@@ -7,12 +8,15 @@ export type Config = {
   date: string;
   facing: number;
   horizon: number;
+  space?: "opening" | "patio";
+  buildings?: Building[];
 };
 export type Position = { azimuth: number; altitude: number };
 export type Sample = Position & {
   instant: number;
   visible: boolean;
   daylight: boolean;
+  blocked?: boolean;
 };
 export const bearing = (n: number) => ((n % 360) + 360) % 360;
 export function position(instant: number, lat: number, lon: number): Position {
@@ -22,6 +26,16 @@ export function qualifies(p: Position, facing: number, horizon: number) {
   return (
     p.altitude > Math.max(0, horizon) &&
     Math.abs(bearing(p.azimuth - facing + 180) - 180) < 90
+  );
+}
+export function potential(p: Position, c: Config) {
+  return c.space === "patio"
+    ? p.altitude > Math.max(0, c.horizon)
+    : qualifies(p, c.facing, c.horizon);
+}
+export function exposure(p: Position, c: Config) {
+  return (
+    potential(p, c) && !(c.buildings || []).some((b) => buildingBlocks(p, b))
   );
 }
 export function dayBounds(date: string, zone: string) {
@@ -60,7 +74,8 @@ export function calculate(c: Config) {
     samples.push({
       ...p,
       instant,
-      visible: qualifies(p, c.facing, c.horizon),
+      visible: exposure(p, c),
+      blocked: potential(p, c) && !exposure(p, c),
       daylight: p.altitude > 0,
     });
   }
