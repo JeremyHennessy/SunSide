@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { type Config, type Position } from "../solar/engine";
 import { contains, mappedBlocks, projectedShadow } from "../maps/geometry";
+const StreetMap = lazy(() => import("./StreetMap"));
 export function BuildingPlanner({
   c,
   p,
   onChange,
+  onLocate,
 }: {
   c: Config;
   p: Position;
   onChange: (patch: Partial<Config>) => void;
+  onLocate: () => void;
 }) {
   const callback = useRef(onChange);
   callback.current = onChange;
@@ -70,121 +73,130 @@ export function BuildingPlanner({
       </p>
       <div className="mapped-layout">
         <div className="mapped-map">
-          <svg
-            viewBox="0 0 500 500"
-            role="img"
-            aria-label="Nearby mapped building footprints and calculated ground-level shadows, north up"
-            onClick={(e) => {
-              if (!map) return;
-              const r = e.currentTarget.getBoundingClientRect();
-              move(
-                ((((e.clientX - r.left) / r.width) * 500 - 250) * zoom) / 230,
-                (-(((e.clientY - r.top) / r.height) * 500 - 250) * zoom) / 230,
-              );
-            }}
-          >
-            <defs>
-              <clipPath id="mapped-clip">
-                <rect x="20" y="20" width="460" height="460" rx="22" />
-              </clipPath>
-              <pattern
-                id="unknown-height"
-                width="8"
-                height="8"
-                patternUnits="userSpaceOnUse"
-              >
-                <rect width="8" height="8" fill="#e2e7e5" />
-                <path d="M0 8L8 0" stroke="#8c9e9d" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect
-              x="20"
-              y="20"
-              width="460"
-              height="460"
-              rx="22"
-              fill="#edf1e7"
-            />
-            <g clipPath="url(#mapped-clip)">
-              {[100, 175, 250, 325, 400].map((v) => (
-                <path
-                  key={v}
-                  d={`M20 ${v}H480 M${v} 20V480`}
-                  stroke="#dae2d8"
-                  strokeWidth="1"
-                />
-              ))}
-              {p.altitude > 0 &&
-                known.map((b, i) => {
-                  const shadow = projectedShadow(p, b);
-                  return (
-                    <g key={`s${i}`} fill="#657c86" opacity=".3">
-                      <path d={path(shadow.roof)} fillRule="evenodd" />
-                      <path d={path(shadow.sides)} fillRule="nonzero" />
-                    </g>
-                  );
-                })}
-              {buildings.map((b, i) => (
-                <path
-                  key={i}
-                  d={path(b.rings)}
-                  fill={b.height === null ? "url(#unknown-height)" : "#274854"}
-                  stroke="#f9fbf4"
-                  strokeWidth="1"
-                  fillRule="evenodd"
+          <Suspense fallback={<p>Loading street map…</p>}>
+            <StreetMap c={c} p={p} onChange={onChange} onLocate={onLocate} />
+          </Suspense>
+          <details className="shadow-detail">
+            <summary>Inspect the building shadow diagram</summary>
+            <svg
+              viewBox="0 0 500 500"
+              role="img"
+              aria-label="Nearby mapped building footprints and calculated ground-level shadows, north up"
+              onClick={(e) => {
+                if (!map) return;
+                const r = e.currentTarget.getBoundingClientRect();
+                move(
+                  ((((e.clientX - r.left) / r.width) * 500 - 250) * zoom) / 230,
+                  (-(((e.clientY - r.top) / r.height) * 500 - 250) * zoom) /
+                    230,
+                );
+              }}
+            >
+              <defs>
+                <clipPath id="mapped-clip">
+                  <rect x="20" y="20" width="460" height="460" rx="22" />
+                </clipPath>
+                <pattern
+                  id="unknown-height"
+                  width="8"
+                  height="8"
+                  patternUnits="userSpaceOnUse"
                 >
-                  <title>
-                    {b.height === null
-                      ? "Height unknown"
-                      : `Recorded height ${b.height.toFixed(1)} m`}{" "}
-                    · {b.source} · {b.heightSource}
-                  </title>
-                </path>
-              ))}
-              <line
-                x1="250"
-                y1="250"
-                x2={250 + 85 * Math.sin((p.azimuth * Math.PI) / 180)}
-                y2={250 - 85 * Math.cos((p.azimuth * Math.PI) / 180)}
-                stroke="#ae7700"
-                strokeWidth="3"
-                strokeDasharray="5 5"
+                  <rect width="8" height="8" fill="#e2e7e5" />
+                  <path d="M0 8L8 0" stroke="#8c9e9d" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect
+                x="20"
+                y="20"
+                width="460"
+                height="460"
+                rx="22"
+                fill="#edf1e7"
               />
-              <circle
-                cx="250"
-                cy="250"
-                r="11"
-                fill={blocked ? "#a85636" : "#f0bd48"}
-                stroke="#fff"
-                strokeWidth="4"
-              />
-            </g>
-            <text x="250" y="16" textAnchor="middle" fill="#163744">
-              N
-            </text>
-            <text x="36" y="461" fill="#163744" fontSize="14">
-              {zoom} m from center to edge
-            </text>
-          </svg>
-          <div className="map-controls">
-            <button
-              className="secondary"
-              onClick={() => setZoom((z) => Math.max(50, z / 2))}
-              disabled={zoom <= 50}
-              aria-label="Zoom in on buildings"
-            >
-              +
-            </button>
-            <button
-              className="secondary"
-              onClick={() => setZoom((z) => Math.min(600, z * 2))}
-              disabled={zoom >= 600}
-              aria-label="Zoom out on buildings"
-            >
-              −
-            </button>
-            <span>Patio point ● · sun direction ┄</span>
-          </div>
+              <g clipPath="url(#mapped-clip)">
+                {[100, 175, 250, 325, 400].map((v) => (
+                  <path
+                    key={v}
+                    d={`M20 ${v}H480 M${v} 20V480`}
+                    stroke="#dae2d8"
+                    strokeWidth="1"
+                  />
+                ))}
+                {p.altitude > 0 &&
+                  known.map((b, i) => {
+                    const shadow = projectedShadow(p, b);
+                    return (
+                      <g key={`s${i}`} fill="#657c86" opacity=".3">
+                        <path d={path(shadow.roof)} fillRule="evenodd" />
+                        <path d={path(shadow.sides)} fillRule="nonzero" />
+                      </g>
+                    );
+                  })}
+                {buildings.map((b, i) => (
+                  <path
+                    key={i}
+                    d={path(b.rings)}
+                    fill={
+                      b.height === null ? "url(#unknown-height)" : "#274854"
+                    }
+                    stroke="#f9fbf4"
+                    strokeWidth="1"
+                    fillRule="evenodd"
+                  >
+                    <title>
+                      {b.height === null
+                        ? "Height unknown"
+                        : `Recorded height ${b.height.toFixed(1)} m`}{" "}
+                      · {b.source} · {b.heightSource}
+                    </title>
+                  </path>
+                ))}
+                <line
+                  x1="250"
+                  y1="250"
+                  x2={250 + 85 * Math.sin((p.azimuth * Math.PI) / 180)}
+                  y2={250 - 85 * Math.cos((p.azimuth * Math.PI) / 180)}
+                  stroke="#ae7700"
+                  strokeWidth="3"
+                  strokeDasharray="5 5"
+                />
+                <circle
+                  cx="250"
+                  cy="250"
+                  r="11"
+                  fill={blocked ? "#a85636" : "#f0bd48"}
+                  stroke="#fff"
+                  strokeWidth="4"
+                />
+              </g>
+              <text x="250" y="16" textAnchor="middle" fill="#163744">
+                N
+              </text>
+              <text x="36" y="461" fill="#163744" fontSize="14">
+                {zoom} m from center to edge
+              </text>
+            </svg>
+            <div className="map-controls">
+              <button
+                className="secondary"
+                onClick={() => setZoom((z) => Math.max(50, z / 2))}
+                disabled={zoom <= 50}
+                aria-label="Zoom in on buildings"
+              >
+                +
+              </button>
+              <button
+                className="secondary"
+                onClick={() => setZoom((z) => Math.min(600, z * 2))}
+                disabled={zoom >= 600}
+                aria-label="Zoom out on buildings"
+              >
+                −
+              </button>
+              <span>Patio point ● · sun direction ┄</span>
+            </div>
+          </details>
         </div>
         <div className="mapped-details">
           {c.space !== "patio" && (
@@ -219,9 +231,9 @@ export function BuildingPlanner({
               </div>
               <p className="hint">
                 Shadows use recorded heights, which may themselves be estimates.
-                Hatched outlines have no usable height and are excluded.
-                Buildings with parts use simplified extrusions; rooftop shape is
-                not resolved.
+                Dashed map outlines and hatched diagram outlines have no usable
+                height and are excluded. Buildings with parts use simplified
+                extrusions; rooftop shape is not resolved.
               </p>
             </>
           )}
@@ -259,9 +271,10 @@ export function BuildingPlanner({
             </button>
           )}
           <p className="hint">
-            Map tiles load from Overture’s public archive, revealing the
-            surrounding map area to its host. Coordinates are not sent as a
-            search query. <a href="/privacy/">Privacy</a>
+            Building tiles load from Overture’s public archive and street tiles
+            from OpenStreetMap, revealing the surrounding map area to its host.
+            Coordinates are not sent as a search query.{" "}
+            <a href="/privacy/">Privacy</a>
           </p>
           <p className="map-attribution">
             ©{" "}

@@ -760,7 +760,7 @@ button:disabled {
   margin-top: 24px;
   align-items: start;
 }
-.mapped-map svg {
+.shadow-detail > svg {
   width: 100%;
   height: auto;
   cursor: crosshair;
@@ -817,5 +817,55 @@ button:disabled {
   .mapped-layout {
     grid-template-columns: 1fr;
     gap: 20px;
+  }
+}
+.street-map {
+  height: 420px;
+  width: 100%;
+  border-radius: 16px;
+  z-index: 0;
+  background: #edf1e7;
+}
+.street-map .leaflet-control-zoom a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  color: #163744;
+}
+.street-map .leaflet-control-attribution {
+  font-size: 11px;
+  color: #163744;
+  background: rgba(255, 255, 255, 0.95);
+}
+.street-map .leaflet-control-attribution a {
+  color: #214c5c;
+}
+.street-map .leaflet-tooltip {
+  color: #163744;
+  font: 600 12px system-ui;
+  background: #fff9e5;
+}
+.street-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0;
+}
+.street-map-actions span {
+  font-size: 0.8rem;
+}
+.shadow-detail {
+  border-top: 1px solid #dce2d9;
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.shadow-detail summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+@media (max-width: 600px) {
+  .street-map {
+    height: 360px;
   }
 }

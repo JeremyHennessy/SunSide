@@ -1,6 +1,17 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import ranges from "../fixtures/overture-ranges.json" with { type: "json" };
+test.beforeEach(async ({ page }) => {
+  await page.route("https://tile.openstreetmap.org/**", (route) =>
+    route.fulfill({
+      contentType: "image/png",
+      body: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgZkAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    }),
+  );
+});
 test("automatic mapped footprints need no measurements and survive provider failure", async ({
   page,
 }) => {
@@ -60,6 +71,40 @@ test("automatic mapped footprints need no measurements and survive provider fail
   await expect(page.getByText(/Building data unavailable/)).toBeVisible();
   await expect(
     page.getByText("Potential direct sun", { exact: true }).first(),
+  ).toBeVisible();
+});
+test("street map selects a patio and geolocation stays explicit", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 51.5074, longitude: -0.1278 });
+  await page.route(
+    "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/**",
+    (route) => route.abort(),
+  );
+  await page.goto("/");
+  const map = page.getByRole("group", { name: /OpenStreetMap street map/ });
+  await expect(map).toBeVisible();
+  await expect(page.getByLabel("Latitude", { exact: true })).toHaveValue(
+    "44.6488",
+  );
+  await page.getByRole("button", { name: "Find me on this map" }).click();
+  await expect(page.getByLabel("Latitude", { exact: true })).toHaveValue(
+    "51.5074",
+  );
+  const old = await page.getByLabel("Longitude", { exact: true }).inputValue();
+  await map.click({ position: { x: 100, y: 200 } });
+  await expect(page.getByLabel("Longitude", { exact: true })).not.toHaveValue(
+    old,
+  );
+  await expect(page.getByLabel("Space type", { exact: true })).toHaveValue(
+    "patio",
+  );
+  await expect(
+    page
+      .getByRole("link", { name: "OpenStreetMap contributors", exact: true })
+      .first(),
   ).toBeVisible();
 });
 test("climate is opt-in and handles provider data and failure", async ({
