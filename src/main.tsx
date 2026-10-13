@@ -699,7 +699,10 @@ function App() {
       </main>
       <footer>
         <nav aria-label="SunSide guides">
-          <a href="/guides/balcony-direction/">Balcony direction</a> ·{" "}
+          <a href="https://github.com/JeremyHennessy/SunSide/issues">
+            Project &amp; feedback
+          </a>{" "}
+          · <a href="/guides/balcony-direction/">Balcony direction</a> ·{" "}
           <a href="/guides/seasons/">Seasonal sunlight</a> ·{" "}
           <a href="/guides/understanding-estimates/">Understanding estimates</a>{" "}
           · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> ·{" "}
@@ -714,13 +717,13 @@ function App() {
           <p>
             Solar and shadow calculations run in your browser. The optional
             climate button sends rounded regional coordinates to NASA POWER. The
-            cloud forecast buttons send rounded coordinates to ECCC and, in
-            North America, NWS to check US coverage. Geolocation runs only when
-            you request it. Saving stores your configuration on this device;
-            delete it with Delete & reset. Hosting providers may process routine
-            request logs. No analytics, ads or affiliate tracking are installed.
-            Estimates are informational and are not a guarantee of actual
-            exposure or a property assessment.
+            cloud forecast buttons send rounded coordinates to ECCC, MET Norway
+            and, in North America, NWS to check US coverage. Geolocation runs
+            only when you request it. Saving stores your configuration on this
+            device; delete it with Delete & reset. Hosting providers may process
+            routine request logs. No analytics, ads or affiliate tracking are
+            installed. Estimates are informational and are not a guarantee of
+            actual exposure or a property assessment.
           </p>
         </details>
         <p>

@@ -10,6 +10,32 @@ test("clouds are opt-in, preserve geometric hours and show related models honest
   let requests = 0,
     active = 0,
     maxActive = 0;
+  let metRequests = 0;
+  await page.route("https://api.met.no/weatherapi/**", async (route) => {
+    metRequests++;
+    await route.fulfill({
+      headers: { Expires: new Date(Date.now() + 3600000).toUTCString() },
+      json: {
+        properties: {
+          meta: {
+            updated_at: new Date(run).toISOString(),
+            units: { cloud_area_fraction: "%", cloud_area_fraction_low: "%" },
+          },
+          timeseries: Array.from({ length: 241 }, (_, i) => ({
+            time: new Date(run - 86400000 + i * 3600000).toISOString(),
+            data: {
+              instant: {
+                details: {
+                  cloud_area_fraction: 80,
+                  cloud_area_fraction_low: 40,
+                },
+              },
+            },
+          })),
+        },
+      },
+    });
+  });
   await page.route("https://geo.weather.gc.ca/geomet?**", async (route) => {
     requests++;
     const q = new URL(route.request().url()).searchParams;
@@ -65,9 +91,12 @@ test("clouds are opt-in, preserve geometric hours and show related models honest
     .getByRole("button", { name: "Load cloud forecasts", exact: true })
     .click();
   await expect(
-    page.getByText("≈ 53% cloud cover", { exact: true }),
+    page.getByText("≈ 67% cloud cover", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText(/3 products · 1 forecast family/)).toBeVisible();
+  await expect(
+    page.getByText(/4 products · 2 forecast families/),
+  ).toBeVisible();
+  expect(metRequests).toBe(1);
   expect(await page.locator(".stats").innerText()).toBe(hours);
   expect(requests).toBe(6);
   await page.getByRole("button", { name: "Compare regional ensemble" }).click();
@@ -109,12 +138,16 @@ test("clouds are opt-in, preserve geometric hours and show related models honest
     page.getByText(/No fresh cloud forecast available/),
   ).toBeVisible();
   await expect(
-    page.getByText("≈ 53% cloud cover", { exact: true }),
+    page.getByText("≈ 67% cloud cover", { exact: true }),
   ).toHaveCount(0);
+  expect(metRequests).toBe(1);
 });
 test("NWS opaque sky is separate from total cloud and invalid ECCC data is excluded", async ({
   page,
 }) => {
+  await page.route("https://api.met.no/**", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
+  );
   await page.route("https://geo.weather.gc.ca/geomet?**", async (route) => {
     const q = new URL(route.request().url()).searchParams,
       layer = q.get("LAYERS")!;
@@ -180,6 +213,9 @@ test("NWS opaque sky is separate from total cloud and invalid ECCC data is exclu
   ).toBeVisible();
 });
 test("cloud outage does not break solar planning", async ({ page }) => {
+  await page.route("https://api.met.no/**", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
+  );
   await page.route("https://geo.weather.gc.ca/**", (route) =>
     route.fulfill({ status: 503, body: "Unavailable" }),
   );
@@ -192,4 +228,29 @@ test("cloud outage does not break solar planning", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: "E", exact: true }).click();
   await expect(page.locator(".stats")).toContainText("Potential direct sun");
+});
+test("MET throttling stops repeated network requests", async ({ page }) => {
+  let requests = 0;
+  await page.route("https://geo.weather.gc.ca/**", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
+  );
+  await page.route("https://api.met.no/**", (route) => {
+    requests++;
+    return route.fulfill({ status: 429, body: "Rate limited" });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Load cloud forecasts", exact: true })
+    .click();
+  await expect(
+    page.getByText(/No fresh cloud forecast available/),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+  await page
+    .getByRole("button", { name: "Refresh cloud forecasts", exact: true })
+    .click();
+  await expect(
+    page.getByText(/No fresh cloud forecast available/),
+  ).toBeVisible();
+  expect(requests).toBe(1);
 });
