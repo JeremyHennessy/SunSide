@@ -1,0 +1,45 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+const root = "https://sunside-3g7.pages.dev";
+const pages = [
+  [
+    "guides/balcony-direction",
+    "How balcony direction affects sunlight",
+    "Understand east, west, north and south-facing balconies without oversimplifying your location.",
+    `<p>A balcony’s direction describes the bearing outward from the building. It is measured clockwise from true north: north 0°, east 90°, south 180° and west 270°. Stand facing outward through the opening to estimate yours. A phone compass may report magnetic north, so check its settings before treating it as a true-north measurement.</p><h2>Morning and afternoon</h2><p>East-facing openings generally align with morning sunlight; west-facing ones generally align with afternoon sunlight. The exact intervals depend on latitude, date and the opening’s orientation. A southeast-facing opening has a different daily pattern from a northeast-facing one.</p><h2>North and south need context</h2><p>At many northern temperate locations, south-facing openings align with midday sun and are useful for lower winter sunlight. North-facing openings can still receive early or late summer sun when the sun rises northeast and sets northwest. In southern temperate locations, north-facing openings often align with midday sun. Near the equator, the sun moves between the northern and southern sky during the year.</p><h2>Use your own space</h2><p>Select your location and its time zone, enter the outward bearing, then compare winter and summer. A tall building, tree or balcony roof can remove much of the geometric potential. Check the space in person before using an estimate for a rental decision or plant placement.</p>`,
+  ],
+  [
+    "guides/seasons",
+    "How sunlight changes between seasons",
+    "Compare the daily sun path through the year in both hemispheres.",
+    `<p>The Earth’s axis is tilted relative to its orbit. This changes the sun’s daily altitude and the length of daylight through the year. At temperate latitudes, a summer day often has a higher sun and a longer daylight period than a winter day.</p><h2>Opposite seasons</h2><p>June is summer in the Northern Hemisphere and winter in the Southern Hemisphere. December reverses those seasons. SunSide labels its seasonal comparison using your selected latitude. Equatorial places may be better understood by wet and dry seasons rather than four temperate seasons; the comparison still shows the actual geometry for each representative date.</p><h2>A high sun can be blocked, too</h2><p>Long daylight does not guarantee a sunny balcony floor. An overhang may block high summer sunlight while admitting lower winter rays. The current planner does not calculate this effect because it does not know the roof height, projection or balcony dimensions.</p><h2>Compare more than one date</h2><p>The seasonal buttons use representative dates near the equinoxes and solstices. These are approximate dates, not exact event instants. Change the date manually to see the gradual change between them. At high latitudes, the sun may remain above or below the horizon all day.</p>`,
+  ],
+  [
+    "guides/understanding-estimates",
+    "What a sunlight estimate can and cannot tell you",
+    "Separate sun position, geometric potential and actual direct sunlight.",
+    `<h2>Three different questions</h2><p>Sun position tells you where the sun is in the sky at an instant. Potential direct sunlight asks whether it is above the assumed horizon and in front of your opening. Actual sunlight asks whether its rays reach the particular surface after buildings, trees, roofs and other objects block them.</p><p>SunSide calculates the first two. It does not have verified local building geometry, weather forecasts or measurements of your balcony. Its horizon slider represents a uniform angular obstruction, which is a simplified assumption.</p><h2>What do the angles mean?</h2><p>Azimuth is the compass bearing clockwise from true north. Altitude is the angle above the horizon, with 90° directly overhead. The sky diagram is a top-down radial plot: center is overhead, edge is horizon. It is not a perspective photograph of your space.</p><h2>How precise are the times?</h2><p>Exposure intervals use five-minute bins, classified at each bin’s midpoint. Boundaries are approximate, and very short intervals may be missed. Position at the slider instant is calculated directly. Daylight is defined here as the apparent sun center above the horizon; it is different from a standard sunrise table based on the upper limb.</p><h2>Local clock time matters</h2><p>Choose the time zone belonging to the selected coordinates. Manual coordinates and device location do not automatically determine that zone. Daylight-saving changes are applied by the selected IANA zone. Clouds and atmospheric conditions can change actual exposure regardless of geometry.</p>`,
+  ],
+  [
+    "privacy",
+    "SunSide privacy",
+    "How SunSide handles location and saved settings.",
+    `<p>Updated October 13, 2026.</p><p>Solar calculations run in your browser. You can use preset coordinates or enter coordinates manually. Browser geolocation is requested only when you press “Use my location”; your browser controls permission. SunSide does not send those coordinates to a geocoder or calculation server.</p><p>“Save in this browser” stores your configuration, including coordinates, in local storage on the device. “Delete &amp; reset” removes that saved record. Saved settings are not automatically loaded. No accounts, advertising, analytics or affiliate tracking are installed.</p><p>Cloudflare and GitHub provide hosting and may process routine network request information such as IP addresses and browser details under their own policies. External reference links lead to sites with separate policies. This notice will be updated before additional data collection is introduced.</p>`,
+  ],
+  [
+    "terms",
+    "SunSide terms of use",
+    "Important assumptions for using SunSide sunlight estimates.",
+    `<p>Updated October 13, 2026.</p><p>SunSide is a free informational planner. Results describe simplified geometric sunlight potential, not a guarantee of actual exposure, an architectural survey or a property valuation. Buildings, trees, clouds, surface dimensions and local atmospheric conditions can change real sunlight.</p><p>Check important decisions with measurements of the real space and appropriate professional advice where needed. Availability and results are provided without a guarantee. SunSide does not currently sell products, accept payments or offer paid subscriptions.</p><p>The solar engine uses SunCalc under the <a href="/suncalc-license.txt">BSD-2-Clause license</a>. Its published notice and disclaimer are available at that link.</p>`,
+  ],
+];
+for (const [slug, title, description, content] of pages) {
+  mkdirSync(`public/${slug}`, { recursive: true });
+  writeFileSync(
+    `public/${slug}/index.html`,
+    `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} | SunSide</title><meta name="description" content="${description}"><link rel="canonical" href="${root}/${slug}/"><link rel="icon" href="/sun.svg"><meta property="og:title" content="${title} | SunSide"><meta property="og:description" content="${description}"><meta property="og:type" content="article"><style>body{margin:0;background:#f7f7ef;color:#163744;font:17px/1.8 system-ui}main,header,footer{max-width:740px;margin:auto;padding:28px 24px}header a{font-weight:700;font-size:24px;text-decoration:none}a{color:#214c5c}h1{font-size:clamp(32px,6vw,48px);line-height:1.15;letter-spacing:-1px}h2{font-size:24px;margin-top:38px}p{color:#4c656e}footer{border-top:1px solid #dce2d9;font-size:14px}a:focus-visible{outline:3px solid #ce8553;outline-offset:4px}.cta{display:inline-block;padding:12px 20px;background:#163744;color:white;border-radius:8px;text-decoration:none}</style></head><body><header><a href="/">☀ SunSide</a></header><main><h1>${title}</h1><p>${description}</p>${content}<p><a class="cta" href="/">Explore your sunlight →</a></p></main><footer><a href="/guides/balcony-direction/">Balcony direction</a> · <a href="/guides/seasons/">Seasons</a> · <a href="/guides/understanding-estimates/">Estimates</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a><p>Solar sources: <a href="https://github.com/mourner/suncalc">SunCalc</a> and <a href="https://gml.noaa.gov/grad/solcalc/calcdetails.html">NOAA calculation reference</a>.</p></footer></body></html>`,
+  );
+}
+writeFileSync(
+  "public/sitemap.xml",
+  `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${["", ...pages.map((p) => p[0] + "/")].map((p) => `<url><loc>${root}/${p}</loc></url>`).join("")}</urlset>`,
+);
