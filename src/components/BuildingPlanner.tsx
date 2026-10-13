@@ -245,10 +245,10 @@ export function BuildingPlanner({
             </div>
           </fieldset>
           <p className="hint">
-            Ground-level patio estimate · level terrain · buildings within 600
-            m. Trees, roof overhangs, elevated balconies and distant shadows are
-            not resolved. This is partial mapped coverage, not verified actual
-            exposure.
+            Ground-level patio estimate · level terrain · mapping extends 600 m
+            in each cardinal direction. Trees, roof overhangs, elevated
+            balconies and distant shadows are not resolved. This is partial
+            mapped coverage, not verified actual exposure.
           </p>
           {status.includes("unavailable") && (
             <button
