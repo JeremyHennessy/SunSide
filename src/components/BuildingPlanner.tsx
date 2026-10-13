@@ -1,11 +1,6 @@
-import {
-  wallAndShadow,
-  buildingBlocks,
-  shadowLength,
-  type Building,
-  validBuilding,
-} from "../solar/shadows";
+import { useEffect, useRef, useState } from "react";
 import { type Config, type Position } from "../solar/engine";
+import { contains, mappedBlocks, projectedShadow } from "../maps/geometry";
 export function BuildingPlanner({
   c,
   p,
@@ -15,192 +10,277 @@ export function BuildingPlanner({
   p: Position;
   onChange: (patch: Partial<Config>) => void;
 }) {
-  const buildings = c.buildings || [];
-  function edit(i: number, key: keyof Building, value: number) {
-    onChange({
-      buildings: buildings.map((b, n) =>
-        n === i ? { ...b, [key]: value } : b,
-      ),
+  const callback = useRef(onChange);
+  callback.current = onChange;
+  const [status, setStatus] = useState("Loading nearby public building data…"),
+    [zoom, setZoom] = useState(200),
+    [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    setStatus("Loading nearby public building data…");
+    callback.current({ mapped: undefined, buildings: undefined });
+    import("../maps/buildings")
+      .then((m) => m.loadBuildings(c.lat, c.lon, controller.signal))
+      .then((mapped) => {
+        if (cancelled) return;
+        callback.current({ mapped });
+        setStatus("");
+      })
+      .catch(() => {
+        if (!cancelled)
+          setStatus(
+            "Building data unavailable. Solar potential still works; nearby shadows are unknown.",
+          );
+      });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [c.lat, c.lon, retry]);
+  const map =
+    c.mapped?.lat === c.lat && c.mapped.lon === c.lon ? c.mapped : undefined;
+  const buildings = map?.buildings || [];
+  const known = buildings.filter((b) => b.height !== null),
+    unknown = buildings.filter((b) => b.height === null);
+  const inside = buildings.some((b) => contains(b.rings));
+  const blocked = known.some((b) => mappedBlocks(p, b));
+  const xy = (v: { x: number; y: number }) =>
+    `${250 + (v.x * 230) / zoom},${250 - (v.y * 230) / zoom}`;
+  const path = (rings: (typeof buildings)[number]["rings"]) =>
+    rings.map((r) => `M${r.map(xy).join(" L")} Z`).join(" ");
+  function move(x: number, y: number) {
+    callback.current({
+      space: "patio",
+      lat: c.lat + y / 111195,
+      lon:
+        ((c.lon + x / (111195 * Math.cos((c.lat * Math.PI) / 180)) + 540) %
+          360) -
+        180,
     });
   }
   return (
-    <section className="building-section">
-      <span className="eyebrow">WHAT’S BETWEEN YOU AND THE SUN?</span>
-      <h2>Give nearby buildings a shape.</h2>
+    <section className="building-section" aria-labelledby="map-title">
+      <span className="eyebrow">NEARBY BUILDINGS · AUTOMATICALLY</span>
+      <h2 id="map-title">Put your patio on the map.</h2>
       <p>
-        Measure from one point on your patio. Add a building’s near wall, facing
-        that point. The model treats each wall as a flat, opaque rectangle on
-        level ground. No building measurements are guessed.
+        Public building outlines and recorded heights load automatically for
+        your location. Tap the map to place your patio point. No building
+        measurements needed.
       </p>
-      <p className="hint">
-        An open patio can receive sun from every direction. Facing direction
-        applies only to the balcony/window mode. This estimates a single point,
-        not the sunny percentage of a whole patio.
-      </p>
-      {buildings.length === 0 ? (
-        <p className="hint">
-          No building geometry supplied. The existing horizon assumption still
-          applies.
-        </p>
-      ) : (
-        buildings.map((b, i) => {
-          const g = wallAndShadow(p, b);
-          const scale =
-            130 /
-            Math.max(
-              b.distance + b.width / 2,
-              Math.min(shadowLength(p, b) || 0, 200) + b.distance,
-              10,
-            );
-          const q = (v: { x: number; y: number }) =>
-            `${200 + v.x * scale},${200 - v.y * scale}`;
-          return (
-            <article className="building-card" key={i}>
-              <div>
-                <h3>Building {i + 1}</h3>
-                <div className="building-fields">
-                  {(
-                    [
-                      ["bearing", "Bearing toward building (°)", 0, 359],
-                      ["distance", "Distance to near wall (m)", 0.1, 10000],
-                      ["width", "Wall width (m)", 0.1, 10000],
-                      ["height", "Top height above ground (m)", 0, 2000],
-                      ["pointHeight", "Patio point above ground (m)", 0, 2000],
-                    ] as const
-                  ).map(([key, label, min, max]) => (
-                    <label key={key}>
-                      {label}
-                      <input
-                        type="number"
-                        min={min}
-                        max={max}
-                        step="0.1"
-                        key={`${i}-${key}-${b[key]}`}
-                        defaultValue={b[key]}
-                        onBlur={(e) => {
-                          const n = Number(e.target.value);
-                          if (
-                            e.target.value &&
-                            Number.isFinite(n) &&
-                            n >= min &&
-                            n <= max
-                          )
-                            edit(i, key, n);
-                          else e.target.value = String(b[key]);
-                        }}
-                      />
-                    </label>
-                  ))}
-                </div>
+      <div className="mapped-layout">
+        <div className="mapped-map">
+          <svg
+            viewBox="0 0 500 500"
+            role="img"
+            aria-label="Nearby mapped building footprints and calculated ground-level shadows, north up"
+            onClick={(e) => {
+              if (!map) return;
+              const r = e.currentTarget.getBoundingClientRect();
+              move(
+                ((((e.clientX - r.left) / r.width) * 500 - 250) * zoom) / 230,
+                (-(((e.clientY - r.top) / r.height) * 500 - 250) * zoom) / 230,
+              );
+            }}
+          >
+            <defs>
+              <clipPath id="mapped-clip">
+                <rect x="20" y="20" width="460" height="460" rx="22" />
+              </clipPath>
+              <pattern
+                id="unknown-height"
+                width="8"
+                height="8"
+                patternUnits="userSpaceOnUse"
+              >
+                <rect width="8" height="8" fill="#e2e7e5" />
+                <path d="M0 8L8 0" stroke="#8c9e9d" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect
+              x="20"
+              y="20"
+              width="460"
+              height="460"
+              rx="22"
+              fill="#edf1e7"
+            />
+            <g clipPath="url(#mapped-clip)">
+              {[100, 175, 250, 325, 400].map((v) => (
+                <path
+                  key={v}
+                  d={`M20 ${v}H480 M${v} 20V480`}
+                  stroke="#dae2d8"
+                  strokeWidth="1"
+                />
+              ))}
+              {p.altitude > 0 &&
+                known.map((b, i) => {
+                  const shadow = projectedShadow(p, b);
+                  return (
+                    <g key={`s${i}`} fill="#657c86" opacity=".3">
+                      <path d={path(shadow.roof)} fillRule="evenodd" />
+                      <path d={path(shadow.sides)} fillRule="nonzero" />
+                    </g>
+                  );
+                })}
+              {buildings.map((b, i) => (
+                <path
+                  key={i}
+                  d={path(b.rings)}
+                  fill={b.height === null ? "url(#unknown-height)" : "#274854"}
+                  stroke="#f9fbf4"
+                  strokeWidth="1"
+                  fillRule="evenodd"
+                >
+                  <title>
+                    {b.height === null
+                      ? "Height unknown"
+                      : `Recorded height ${b.height.toFixed(1)} m`}{" "}
+                    · {b.source} · {b.heightSource}
+                  </title>
+                </path>
+              ))}
+              <line
+                x1="250"
+                y1="250"
+                x2={250 + 85 * Math.sin((p.azimuth * Math.PI) / 180)}
+                y2={250 - 85 * Math.cos((p.azimuth * Math.PI) / 180)}
+                stroke="#ae7700"
+                strokeWidth="3"
+                strokeDasharray="5 5"
+              />
+              <circle
+                cx="250"
+                cy="250"
+                r="11"
+                fill={blocked ? "#a85636" : "#f0bd48"}
+                stroke="#fff"
+                strokeWidth="4"
+              />
+            </g>
+            <text x="250" y="16" textAnchor="middle" fill="#163744">
+              N
+            </text>
+            <text x="36" y="461" fill="#163744" fontSize="14">
+              {zoom} m from center to edge
+            </text>
+          </svg>
+          <div className="map-controls">
+            <button
+              className="secondary"
+              onClick={() => setZoom((z) => Math.max(50, z / 2))}
+              disabled={zoom <= 50}
+              aria-label="Zoom in on buildings"
+            >
+              +
+            </button>
+            <button
+              className="secondary"
+              onClick={() => setZoom((z) => Math.min(600, z * 2))}
+              disabled={zoom >= 600}
+              aria-label="Zoom out on buildings"
+            >
+              −
+            </button>
+            <span>Patio point ● · sun direction ┄</span>
+          </div>
+        </div>
+        <div className="mapped-details">
+          {c.space !== "patio" && (
+            <button
+              className="secondary"
+              onClick={() => onChange({ space: "patio" })}
+            >
+              Use mapped ground-level patio mode
+            </button>
+          )}
+          <p className="map-status" role="status">
+            {status ||
+              (inside
+                ? "Your point is inside a mapped building. Tap an outdoor patio or use the point controls below."
+                : p.altitude <= 0
+                  ? "Sun below the horizon."
+                  : blocked
+                    ? "A mapped building blocks this ground-level point."
+                    : "No known mapped building blocks this point. Missing heights may still hide shadows.")}
+          </p>
+          {map && (
+            <>
+              <div className="map-counts">
+                <strong>
+                  {known.length}
+                  <small>outlines with heights</small>
+                </strong>
+                <strong>
+                  {unknown.length}
+                  <small>heights unknown</small>
+                </strong>
+              </div>
+              <p className="hint">
+                Shadows use recorded heights, which may themselves be estimates.
+                Hatched outlines have no usable height and are excluded.
+                Buildings with parts use simplified extrusions; rooftop shape is
+                not resolved.
+              </p>
+            </>
+          )}
+          <fieldset className="map-point">
+            <legend>Move patio point 10 metres</legend>
+            <div className="map-controls">
+              {[
+                ["North", 0, 10],
+                ["East", 10, 0],
+                ["South", 0, -10],
+                ["West", -10, 0],
+              ].map(([label, x, y]) => (
                 <button
-                  className="text-button"
-                  onClick={() =>
-                    onChange({ buildings: buildings.filter((_, n) => n !== i) })
-                  }
+                  className="secondary"
+                  key={label}
+                  onClick={() => move(Number(x), Number(y))}
                 >
-                  Remove building {i + 1}
+                  {label}
                 </button>
-                <p className="hint">
-                  {!validBuilding(b)
-                    ? "Enter distance, width and top height to use this building."
-                    : p.altitude <= 0
-                      ? "Sun below horizon."
-                      : buildingBlocks(p, b)
-                        ? "This wall blocks the selected patio point at this time."
-                        : "This wall does not block the selected point at this time."}{" "}
-                  {validBuilding(b) &&
-                    p.altitude > 0 &&
-                    `Projected shadow length at the patio’s height: ≈ ${shadowLength(p, b)!.toFixed(1)} m.`}
-                </p>
-              </div>
-              <div className="building-diagram">
-                <svg
-                  viewBox="0 0 400 400"
-                  role="img"
-                  aria-label={`Building ${i + 1} measured wall and projected shadow. ${buildingBlocks(p, b) ? "Selected point blocked" : "Selected point not blocked"}.`}
-                >
-                  <defs>
-                    <clipPath id={`wallClip${i}`}>
-                      <rect x="30" y="30" width="340" height="340" />
-                    </clipPath>
-                  </defs>
-                  <rect
-                    x="30"
-                    y="30"
-                    width="340"
-                    height="340"
-                    rx="16"
-                    fill="#eff2e9"
-                  />
-                  <g clipPath={`url(#wallClip${i})`}>
-                    {g.polygon.length > 0 && (
-                      <polygon
-                        points={g.polygon.map(q).join(" ")}
-                        fill="#ce8553"
-                        opacity=".35"
-                      />
-                    )}
-                    <polyline
-                      points={g.wall.map(q).join(" ")}
-                      stroke="#163744"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="200"
-                      cy="200"
-                      r="7"
-                      fill={buildingBlocks(p, b) ? "#9e5334" : "#b88712"}
-                    />
-                    <line
-                      x1="200"
-                      y1="200"
-                      x2={200 + 100 * Math.sin((p.azimuth * Math.PI) / 180)}
-                      y2={200 - 100 * Math.cos((p.azimuth * Math.PI) / 180)}
-                      stroke="#b88712"
-                      strokeDasharray="4 5"
-                    />
-                  </g>
-                  <text x="200" y="22" textAnchor="middle" fill="#163744">
-                    N
-                  </text>
-                  <text x="200" y="390" textAnchor="middle" fill="#163744">
-                    Patio point ● · wall ━ · shadow area
-                  </text>
-                </svg>
-                <p className="hint">
-                  Top-down wall projection, north up. Long shadows can extend
-                  beyond the view. Trees, roofs, wall depth and terrain are
-                  excluded.
-                </p>
-              </div>
-            </article>
-          );
-        })
-      )}
-      <button
-        className="secondary"
-        disabled={buildings.length >= 5}
-        onClick={() =>
-          onChange({
-            buildings: [
-              ...buildings,
-              {
-                bearing: c.facing,
-                distance: 0,
-                width: 0,
-                height: 0,
-                pointHeight: 0,
-              },
-            ],
-          })
-        }
-      >
-        Add a measured building
-      </button>
-      <p className="hint">
-        Enter your measurements. Buildings with missing distance, width or
-        height are ignored. These are not real map data.
-      </p>
+              ))}
+            </div>
+          </fieldset>
+          <p className="hint">
+            Ground-level patio estimate · level terrain · buildings within 600
+            m. Trees, roof overhangs, elevated balconies and distant shadows are
+            not resolved. This is partial mapped coverage, not verified actual
+            exposure.
+          </p>
+          {status.includes("unavailable") && (
+            <button
+              className="secondary"
+              onClick={() => setRetry((n) => n + 1)}
+            >
+              Retry building lookup
+            </button>
+          )}
+          <p className="hint">
+            Map tiles load from Overture’s public archive, revealing the
+            surrounding map area to its host. Coordinates are not sent as a
+            search query. <a href="/privacy/">Privacy</a>
+          </p>
+          <p className="map-attribution">
+            ©{" "}
+            <a href="https://docs.overturemaps.org/attribution/">
+              Overture Maps contributors
+            </a>{" "}
+            · ©{" "}
+            <a href="https://www.openstreetmap.org/copyright">
+              OpenStreetMap contributors
+            </a>{" "}
+            · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a>
+            <br />
+            Release {map?.release || "2026-09-23.1"} ·{" "}
+            <a href="https://docs.overturemaps.org/examples/overture-tiles/">
+              Source data
+            </a>
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

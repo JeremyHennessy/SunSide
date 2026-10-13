@@ -1,6 +1,7 @@
 import { getPosition } from "suncalc";
 import { Temporal } from "@js-temporal/polyfill";
 import { buildingBlocks, type Building } from "./shadows";
+import { mappedBlocks, type BuildingMap } from "../maps/geometry";
 export type Config = {
   lat: number;
   lon: number;
@@ -10,6 +11,7 @@ export type Config = {
   horizon: number;
   space?: "opening" | "patio";
   buildings?: Building[];
+  mapped?: BuildingMap;
 };
 export type Position = { azimuth: number; altitude: number };
 export type Sample = Position & {
@@ -35,7 +37,15 @@ export function potential(p: Position, c: Config) {
 }
 export function exposure(p: Position, c: Config) {
   return (
-    potential(p, c) && !(c.buildings || []).some((b) => buildingBlocks(p, b))
+    potential(p, c) &&
+    !(c.buildings || []).some((b) => buildingBlocks(p, b)) &&
+    !(
+      c.space === "patio" &&
+      c.mapped &&
+      c.mapped.lat === c.lat &&
+      c.mapped.lon === c.lon &&
+      c.mapped.buildings.some((b) => mappedBlocks(p, b))
+    )
   );
 }
 export function dayBounds(date: string, zone: string) {
