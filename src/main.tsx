@@ -14,6 +14,7 @@ import {
 import "./style.css";
 import { BuildingPlanner } from "./components/BuildingPlanner";
 import { ClimateCard } from "./components/ClimateCard";
+import { CloudCard } from "./components/CloudCard";
 import { validBuilding } from "./solar/shadows";
 const places = [
   ["Halifax example", 44.6488, -63.5752, "America/Halifax"],
@@ -622,6 +623,7 @@ function App() {
           </div>
         </section>
         <BuildingPlanner c={c} p={p} onChange={update} />
+        <CloudCard lat={c.lat} lon={c.lon} instant={selected} zone={c.zone} />
         <ClimateCard lat={c.lat} lon={c.lon} date={c.date} />
         <section className="season-section">
           <span className="eyebrow">A DIFFERENT SEASON, A DIFFERENT STORY</span>
@@ -711,12 +713,14 @@ function App() {
           <summary>Privacy & terms</summary>
           <p>
             Solar and shadow calculations run in your browser. The optional
-            climate button sends rounded regional coordinates to NASA POWER.
-            Geolocation runs only when you request it. Saving stores your
-            configuration on this device; delete it with Delete & reset. Hosting
-            providers may process routine request logs. No analytics, ads or
-            affiliate tracking are installed. Estimates are informational and
-            are not a guarantee of actual exposure or a property assessment.
+            climate button sends rounded regional coordinates to NASA POWER. The
+            cloud forecast buttons send rounded coordinates to ECCC and, in
+            North America, NWS to check US coverage. Geolocation runs only when
+            you request it. Saving stores your configuration on this device;
+            delete it with Delete & reset. Hosting providers may process routine
+            request logs. No analytics, ads or affiliate tracking are installed.
+            Estimates are informational and are not a guarantee of actual
+            exposure or a property assessment.
           </p>
         </details>
         <p>
