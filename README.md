@@ -33,4 +33,3 @@ Separate Cloudflare Pages project `sunside`, GitHub `JeremyHennessy/SunSide`, pr
 Open-patio mode accepts sun from every bearing. Up to five user-measured vertical rectangular walls can block rays to a single patio point; supply bearing, near-wall distance, width, top height and patio height above a shared level-ground datum. No dimensions are guessed. No automatic building lookup, building depth, roofs, trees or terrain are modeled. The diagram projects these measured walls using the calculated sun position; it is not a mapped building footprint.
 
 Optional NASA POWER monthly mean air temperatures load only on request, with coordinates rounded to 0.5° latitude and 0.625° longitude. Requests go directly to NASA; results stay in a bounded memory cache. NASA POWER/MERRA-2 regional climatology is not a current forecast or patio thermometer. The provider period is displayed from the response. No paid weather API, tracking or multi-provider averaging is used.
-

@@ -48,3 +48,7 @@ Optional NASA POWER/MERRA-2 monthly mean temperature climatology is fetched only
 
 Next priorities: repair automatic Pages push triggers; add licensed measured 3D/municipal geometry import with explicit coverage/uncertainty; validate indexing and user feedback before monetization.
 
+
+### Verified patio release
+
+PR #3 https://github.com/JeremyHennessy/SunSide/pull/3 merged after successful GitHub Actions runs 38339581132 and 38339618084 and all 10 Chromium tests on preview https://74829252.sunside-3g7.pages.dev. Application main SHA: e5f6f382d14f97a74f491ffe7d47afb910a7a582. Production deployment f2964d02-d021-4c72-8dac-fd1c0a364028 built that exact SHA and succeeded October 13, 2026 at 03:03:48.720972Z. All 10 browser tests passed against https://sunside-3g7.pages.dev; production responsive screenshots captured. Real NASA API response loaded successfully on the hosted preview and the loaded mobile climate card was visually inspected. Both builds were API-triggered Git builds; automatic push deployment remains unresolved. This documentation-only follow-up does not change the application.
