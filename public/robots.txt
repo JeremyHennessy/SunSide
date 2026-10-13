@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sunside-3g7.pages.dev/sitemap.xml
