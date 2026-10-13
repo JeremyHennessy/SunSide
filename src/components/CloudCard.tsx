@@ -15,6 +15,16 @@ type Snapshot = {
   missing: string[];
   checked: number;
 };
+function stamp(instant: number, zone: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(instant);
+}
 export function CloudCard({
   lat,
   lon,
@@ -175,7 +185,7 @@ export function CloudCard({
                   value={p.value}
                 />
                 <p className="hint">
-                  Valid {clock(p.valid, zone)} · Run/update{" "}
+                  Valid {stamp(p.valid, zone)} · Run/update{" "}
                   {new Intl.DateTimeFormat("en-CA", {
                     timeZone: zone,
                     month: "short",
@@ -222,8 +232,9 @@ export function CloudCard({
             </strong>
           </p>
           <p className="hint">
-            Valid {clock(members[0].valid, zone)}. Range is across available
-            scenarios, not a calibrated confidence interval.{" "}
+            Valid {stamp(members[0].valid, zone)} · Run{" "}
+            {stamp(members[0].run, zone)}. Range is across available scenarios,
+            not a calibrated confidence interval.{" "}
             {members.length < 21
               ? "Some members are missing; uncertainty may be understated."
               : ""}
